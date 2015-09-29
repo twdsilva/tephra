@@ -20,6 +20,7 @@ import co.cask.tephra.TransactionManager;
 import co.cask.tephra.distributed.thrift.TTransactionServer;
 import co.cask.tephra.inmemory.InMemoryTransactionService;
 import co.cask.tephra.rpc.ThriftRPCServer;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
@@ -116,6 +117,11 @@ public final class TransactionService extends InMemoryTransactionService {
     leaderElection.start();
 
     notifyStarted();
+  }
+
+  @VisibleForTesting
+  State thriftRPCServerState() {
+    return server.state();
   }
 
   @Override
