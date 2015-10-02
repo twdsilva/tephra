@@ -32,61 +32,17 @@ import java.util.TreeMap;
 /**
  * Represents an in-memory snapshot of the full transaction state.
  */
-public class TransactionSnapshot {
-  private long timestamp;
-  private long readPointer;
-  private long writePointer;
-  private Collection<Long> invalid;
-  private NavigableMap<Long, TransactionManager.InProgressTx> inProgress;
+public class TransactionSnapshot extends MinimalTransactionSnapshot {
+
   private Map<Long, Set<ChangeId>> committingChangeSets;
   private Map<Long, Set<ChangeId>> committedChangeSets;
 
   public TransactionSnapshot(long timestamp, long readPointer, long writePointer, Collection<Long> invalid,
                              NavigableMap<Long, TransactionManager.InProgressTx> inProgress,
                              Map<Long, Set<ChangeId>> committing, Map<Long, Set<ChangeId>> committed) {
-    this.timestamp = timestamp;
-    this.readPointer = readPointer;
-    this.writePointer = writePointer;
-    this.invalid = invalid;
-    this.inProgress = inProgress;
+    super(timestamp, readPointer, writePointer, invalid, inProgress);
     this.committingChangeSets = committing;
     this.committedChangeSets = committed;
-  }
-
-  /**
-   * Returns the timestamp from when this snapshot was created.
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-  /**
-   * Returns the read pointer at the time of the snapshot.
-   */
-  public long getReadPointer() {
-    return readPointer;
-  }
-
-  /**
-   * Returns the next write pointer at the time of the snapshot.
-   */
-  public long getWritePointer() {
-    return writePointer;
-  }
-
-  /**
-   * Returns the list of invalid write pointers at the time of the snapshot.
-   */
-  public Collection<Long> getInvalid() {
-    return invalid;
-  }
-
-  /**
-   * Returns the map of in-progress transaction write pointers at the time of the snapshot.
-   * @return a map of write pointer to expiration timestamp (in milliseconds) for all transactions in-progress.
-   */
-  public Map<Long, TransactionManager.InProgressTx> getInProgress() {
-    return inProgress;
   }
 
   /**
@@ -111,22 +67,6 @@ public class TransactionSnapshot {
   }
 
   /**
-   * @return transaction id {@code X} such that any of the transactions newer than {@code X} might be invisible to
-   *         some of the currently in-progress transactions or to those that will be started <p>
-   *         NOTE: the returned tx id can be invalid.
-   */
-  public long getVisibilityUpperBound() {
-    // the readPointer of the oldest in-progress tx is the oldest in use
-    // todo: potential problem with not moving visibility upper bound for the whole duration of long-running tx
-    Map.Entry<Long, TransactionManager.InProgressTx> firstInProgress = inProgress.firstEntry();
-    if (firstInProgress == null) {
-      // using readPointer as smallest visible when non txs are there
-      return readPointer;
-    }
-    return firstInProgress.getValue().getVisibilityUpperBound();
-  }
-
-  /**
    * Checks that this instance matches another {@code TransactionSnapshot} instance.  Note that the equality check
    * ignores the snapshot timestamp value, but includes all other properties.
    *
@@ -139,10 +79,10 @@ public class TransactionSnapshot {
       return false;
     }
     TransactionSnapshot other = (TransactionSnapshot) obj;
-    return readPointer == other.readPointer &&
-      writePointer == other.writePointer &&
-      invalid.equals(other.invalid) &&
-      inProgress.equals(other.inProgress) &&
+    return getReadPointer() == other.getReadPointer() &&
+      getWritePointer() == other.getWritePointer() &&
+      getInvalid().equals(other.getInvalid()) &&
+      getInProgress().equals(other.getInProgress()) &&
       committingChangeSets.equals(other.committingChangeSets) &&
       committedChangeSets.equals(other.committedChangeSets);
   }
@@ -150,11 +90,11 @@ public class TransactionSnapshot {
   @Override
   public String toString() {
     return Objects.toStringHelper(this)
-        .add("timestamp", timestamp)
-        .add("readPointer", readPointer)
-        .add("writePointer", writePointer)
-        .add("invalidSize", invalid.size())
-        .add("inProgressSize", inProgress.size())
+        .add("timestamp", getTimestamp())
+        .add("readPointer", getReadPointer())
+        .add("writePointer", getWritePointer())
+        .add("invalidSize", getInvalid().size())
+        .add("inProgressSize", getInProgress().size())
         .add("committingSize", committingChangeSets.size())
         .add("committedSize", committedChangeSets.size())
         .toString();
@@ -162,7 +102,8 @@ public class TransactionSnapshot {
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(readPointer, writePointer, invalid, inProgress, committingChangeSets, committedChangeSets);
+    return Objects.hashCode(getReadPointer(), getWritePointer(), getInvalid(), getInProgress(),
+                            committingChangeSets, committedChangeSets);
   }
 
   /**
