@@ -24,6 +24,7 @@ import co.cask.tephra.coprocessor.TransactionStateCache;
 import co.cask.tephra.coprocessor.TransactionStateCacheSupplier;
 import co.cask.tephra.metrics.TxMetricsCollector;
 import co.cask.tephra.persist.HDFSTransactionStateStorage;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionSnapshot;
 import co.cask.tephra.snapshot.DefaultSnapshotCodec;
 import co.cask.tephra.snapshot.SnapshotCodecProvider;
@@ -458,7 +459,7 @@ public class TransactionProcessorTest {
     cache.setConf(conf);
     cache.startAndWait();
     // verify that the transaction snapshot read matches what we wrote in setupBeforeClass()
-    TransactionSnapshot cachedSnapshot = cache.getLatestState();
+    MinimalTransactionSnapshot cachedSnapshot = cache.getLatestState();
     assertNotNull(cachedSnapshot);
     assertEquals(invalidSet, cachedSnapshot.getInvalid());
     cache.stopAndWait();

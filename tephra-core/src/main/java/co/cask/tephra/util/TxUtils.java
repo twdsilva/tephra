@@ -20,7 +20,7 @@ import co.cask.tephra.Transaction;
 import co.cask.tephra.TransactionManager;
 import co.cask.tephra.TransactionType;
 import co.cask.tephra.TxConstants;
-import co.cask.tephra.persist.TransactionSnapshot;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import com.google.common.primitives.Longs;
 
 import java.util.Map;
@@ -67,7 +67,7 @@ public class TxUtils {
    * write pointer from the snapshot, however, we use {@code Long.MAX_VALUE} to avoid mis-identifying any cells as
    * being written by this transaction (and therefore visible).
    */
-  public static Transaction createDummyTransaction(TransactionSnapshot snapshot) {
+  public static Transaction createDummyTransaction(MinimalTransactionSnapshot snapshot) {
     return new Transaction(snapshot.getReadPointer(), Long.MAX_VALUE,
                            Longs.toArray(snapshot.getInvalid()),
                            Longs.toArray(snapshot.getInProgress().keySet()),

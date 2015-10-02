@@ -18,6 +18,7 @@ package co.cask.tephra.snapshot;
 
 import co.cask.tephra.ChangeId;
 import co.cask.tephra.TransactionManager;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionSnapshot;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
@@ -75,18 +76,30 @@ public class DefaultSnapshotCodec implements SnapshotCodec {
     BinaryDecoder decoder = new BinaryDecoder(in);
 
     try {
+      MinimalTransactionSnapshot minTxSnapshot = decodeMinimalSnapshot(in);
+      NavigableMap<Long, Set<ChangeId>> committing = decodeChangeSets(decoder);
+      NavigableMap<Long, Set<ChangeId>> committed = decodeChangeSets(decoder);
+      return new TransactionSnapshot(minTxSnapshot.getTimestamp(), minTxSnapshot.getReadPointer(),
+                                     minTxSnapshot.getWritePointer(), minTxSnapshot.getInvalid(),
+                                     minTxSnapshot.getInProgress(), committing, committed);
+    } catch (IOException e) {
+      LOG.error("Unable to deserialize transaction state: ", e);
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Override
+  public MinimalTransactionSnapshot decodeMinimalSnapshot(InputStream in) {
+    BinaryDecoder decoder = new BinaryDecoder(in);
+    try {
       long timestamp = decoder.readLong();
       long readPointer = decoder.readLong();
       long writePointer = decoder.readLong();
       Collection<Long> invalid = decodeInvalid(decoder);
       NavigableMap<Long, TransactionManager.InProgressTx> inProgress = decodeInProgress(decoder);
-      NavigableMap<Long, Set<ChangeId>> committing = decodeChangeSets(decoder);
-      NavigableMap<Long, Set<ChangeId>> committed = decodeChangeSets(decoder);
-
-      return new TransactionSnapshot(timestamp, readPointer, writePointer, invalid, inProgress,
-                                     committing, committed);
+      return new MinimalTransactionSnapshot(timestamp, readPointer, writePointer, invalid, inProgress);
     } catch (IOException e) {
-      LOG.error("Unable to deserialize transaction state: ", e);
+      LOG.error("Unable to deserilalize transaction state: ", e);
       throw Throwables.propagate(e);
     }
   }

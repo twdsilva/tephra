@@ -125,6 +125,19 @@ public class LocalFileTransactionStateStorage extends AbstractTransactionStateSt
     }
   }
 
+  @Override
+  public MinimalTransactionSnapshot getLatestMinimalSnapshot() throws IOException {
+    InputStream is = getLatestSnapshotInputStream();
+    if (is == null) {
+      return null;
+    }
+    try {
+      return codecProvider.decodeMinimalSnapshot(is);
+    } finally {
+      is.close();
+    }
+  }
+
   private InputStream getLatestSnapshotInputStream() throws IOException {
     File[] snapshotFiles = snapshotDir.listFiles(SNAPSHOT_FILE_FILTER);
     TimestampedFilename mostRecent = null;

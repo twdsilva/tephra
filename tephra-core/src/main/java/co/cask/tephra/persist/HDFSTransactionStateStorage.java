@@ -145,6 +145,19 @@ public class HDFSTransactionStateStorage extends AbstractTransactionStateStorage
     }
   }
 
+  @Override
+  public MinimalTransactionSnapshot getLatestMinimalSnapshot() throws IOException {
+    InputStream in = getLatestSnapshotInputStream();
+    if (in == null) {
+      return null;
+    }
+    try {
+      return readMinimalSnapshotFromInputStream(in);
+    } finally {
+      in.close();
+    }
+  }
+
   private InputStream getLatestSnapshotInputStream() throws IOException {
     TimestampedFilename[] snapshots = listSnapshotFiles();
     Arrays.sort(snapshots);
@@ -160,6 +173,13 @@ public class HDFSTransactionStateStorage extends AbstractTransactionStateStorage
   private TransactionSnapshot readSnapshotInputStream(InputStream in) throws IOException {
     CountingInputStream countingIn = new CountingInputStream(in);
     TransactionSnapshot snapshot = codecProvider.decode(countingIn);
+    LOG.info("Read encoded transaction snapshot of {} bytes", countingIn.getCount());
+    return snapshot;
+  }
+
+  private MinimalTransactionSnapshot readMinimalSnapshotFromInputStream(InputStream in) throws IOException {
+    CountingInputStream countingIn = new CountingInputStream(in);
+    MinimalTransactionSnapshot snapshot = codecProvider.decodeMinimalSnapshot(countingIn);
     LOG.info("Read encoded transaction snapshot of {} bytes", countingIn.getCount());
     return snapshot;
   }

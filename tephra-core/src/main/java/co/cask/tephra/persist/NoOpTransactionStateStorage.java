@@ -61,6 +61,11 @@ public class NoOpTransactionStateStorage extends AbstractIdleService implements 
   }
 
   @Override
+  public MinimalTransactionSnapshot getLatestMinimalSnapshot() throws IOException {
+    return null;
+  }
+
+  @Override
   public long deleteOldSnapshots(int numberToKeep) throws IOException {
     return 0;
   }

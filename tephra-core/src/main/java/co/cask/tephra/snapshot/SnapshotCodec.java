@@ -16,6 +16,7 @@
 
 package co.cask.tephra.snapshot;
 
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionSnapshot;
 
 import java.io.InputStream;
@@ -46,4 +47,10 @@ public interface SnapshotCodec {
    */
   TransactionSnapshot decode(InputStream in);
 
+  /**
+   * Decode a minimal transaction snapshot from an input stream.
+   * @param in the input stream to read from
+   * @return {@link MinimalTransactionSnapshot}
+   */
+  MinimalTransactionSnapshot decodeMinimalSnapshot(InputStream in);
 }

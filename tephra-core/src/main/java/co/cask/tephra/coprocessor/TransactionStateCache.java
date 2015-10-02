@@ -19,7 +19,7 @@ package co.cask.tephra.coprocessor;
 import co.cask.tephra.TxConstants;
 import co.cask.tephra.metrics.TxMetricsCollector;
 import co.cask.tephra.persist.HDFSTransactionStateStorage;
-import co.cask.tephra.persist.TransactionSnapshot;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionStateStorage;
 import co.cask.tephra.snapshot.SnapshotCodecProvider;
 import co.cask.tephra.util.ConfigurationFactory;
@@ -45,7 +45,7 @@ public class TransactionStateCache extends AbstractIdleService implements Config
   private Configuration hConf;
 
   private TransactionStateStorage storage;
-  private volatile TransactionSnapshot latestState;
+  private volatile MinimalTransactionSnapshot latestState;
 
   private Thread refreshService;
   private long lastRefresh;
@@ -149,7 +149,7 @@ public class TransactionStateCache extends AbstractIdleService implements Config
     // only continue if initialization was successful
     if (initialized) {
       long now = System.currentTimeMillis();
-      TransactionSnapshot currentSnapshot = storage.getLatestSnapshot();
+      MinimalTransactionSnapshot currentSnapshot = storage.getLatestMinimalSnapshot();
       if (currentSnapshot != null) {
         if (currentSnapshot.getTimestamp() < (now - 2 * snapshotRefreshFrequency)) {
           LOG.info("Current snapshot is old, will force a refresh on next run.");
@@ -168,7 +168,7 @@ public class TransactionStateCache extends AbstractIdleService implements Config
     }
   }
 
-  public TransactionSnapshot getLatestState() {
+  public MinimalTransactionSnapshot getLatestState() {
     return latestState;
   }
 }

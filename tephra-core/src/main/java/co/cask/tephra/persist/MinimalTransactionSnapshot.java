@@ -75,7 +75,7 @@ public class MinimalTransactionSnapshot {
    * Returns the map of in-progress transaction write pointers at the time of the snapshot.
    * @return a map of write pointer to expiration timestamp (in milliseconds) for all transactions in-progress.
    */
-  public Map<Long, TransactionManager.InProgressTx> getInProgress() {
+  public NavigableMap<Long, TransactionManager.InProgressTx> getInProgress() {
     return inProgress;
   }
 
@@ -109,5 +109,24 @@ public class MinimalTransactionSnapshot {
   @Override
   public int hashCode() {
     return Objects.hashCode(readPointer, writePointer, invalid, inProgress);
+  }
+
+  /**
+   * Checks that this instance matches another {@link MinimalTransactionSnapshot} instance.
+   * Note that the equality check ignores the snapshot timestamp value, but includes all other properties.
+   *
+   * @param obj the other instance to check for equality.
+   * @return {@code true} if the instances are equal, {@code false} if not.
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof  MinimalTransactionSnapshot)) {
+      return false;
+    }
+    MinimalTransactionSnapshot other = (MinimalTransactionSnapshot) obj;
+    return getReadPointer() == other.getReadPointer() &&
+      getWritePointer() == other.getWritePointer() &&
+      getInvalid().equals(other.getInvalid()) &&
+      getInProgress().equals(other.getInProgress());
   }
 }

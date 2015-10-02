@@ -22,6 +22,7 @@ import co.cask.tephra.TxConstants;
 import co.cask.tephra.coprocessor.TransactionStateCache;
 import co.cask.tephra.coprocessor.TransactionStateCacheSupplier;
 import co.cask.tephra.hbase10cdh.Filters;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionSnapshot;
 import co.cask.tephra.util.TxUtils;
 import com.google.common.base.Supplier;
@@ -263,7 +264,7 @@ public class TransactionProcessor extends BaseRegionObserver {
   }
 
   protected InternalScanner createStoreScanner(RegionCoprocessorEnvironment env, String action,
-                                               TransactionSnapshot snapshot, Store store,
+                                               MinimalTransactionSnapshot snapshot, Store store,
                                                List<? extends KeyValueScanner> scanners, ScanType type,
                                                long earliestPutTs) throws IOException {
     if (snapshot == null) {
