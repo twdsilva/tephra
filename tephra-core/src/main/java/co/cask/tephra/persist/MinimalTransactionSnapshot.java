@@ -33,7 +33,6 @@ public class MinimalTransactionSnapshot {
   private Collection<Long> invalid;
   private NavigableMap<Long, TransactionManager.InProgressTx> inProgress;
 
-
   public MinimalTransactionSnapshot(long timestamp, long readPointer, long writePointer, Collection<Long> invalid,
                                     NavigableMap<Long, TransactionManager.InProgressTx> inProgress) {
     this.timestamp = timestamp;

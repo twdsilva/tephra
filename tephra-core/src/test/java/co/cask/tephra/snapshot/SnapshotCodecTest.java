@@ -22,6 +22,7 @@ import co.cask.tephra.TransactionManager;
 import co.cask.tephra.TransactionNotInProgressException;
 import co.cask.tephra.TransactionType;
 import co.cask.tephra.TxConstants;
+import co.cask.tephra.persist.MinimalTransactionSnapshot;
 import co.cask.tephra.persist.TransactionSnapshot;
 import co.cask.tephra.persist.TransactionStateStorage;
 import co.cask.tephra.runtime.ConfigModule;
@@ -106,6 +107,9 @@ public class SnapshotCodecTest {
     }
 
     TransactionSnapshot snapshot2 = provider1.decode(new ByteArrayInputStream(out.toByteArray()));
+    MinimalTransactionSnapshot minTxSnapshot = provider1.decodeMinimalSnapshot(
+      new ByteArrayInputStream(out.toByteArray()));
+    Assert.assertEquals(minTxSnapshot, snapshot2);
     assertEquals(snapshot.getReadPointer(), snapshot2.getReadPointer());
     assertEquals(snapshot.getWritePointer(), snapshot2.getWritePointer());
     assertEquals(snapshot.getInvalid(), snapshot2.getInvalid());
@@ -147,6 +151,8 @@ public class SnapshotCodecTest {
 
     // confirm that the in-progress entry is missing a type
     TransactionSnapshot snapshot = txStorage.getLatestSnapshot();
+    MinimalTransactionSnapshot minTxSnapshot = txStorage.getLatestMinimalSnapshot();
+    Assert.assertEquals(minTxSnapshot, snapshot);
     assertNotNull(snapshot);
     assertEquals(1, snapshot.getInProgress().size());
     Map.Entry<Long, TransactionManager.InProgressTx> entry =
@@ -159,7 +165,7 @@ public class SnapshotCodecTest {
     Configuration conf2 = new Configuration();
     conf2.set(TxConstants.Manager.CFG_TX_SNAPSHOT_LOCAL_DIR, testDir.getAbsolutePath());
     conf2.setStrings(TxConstants.Persist.CFG_TX_SNAPHOT_CODEC_CLASSES,
-        DefaultSnapshotCodec.class.getName(), SnapshotCodecV3.class.getName());
+                     DefaultSnapshotCodec.class.getName(), SnapshotCodecV3.class.getName());
     Injector injector2 = Guice.createInjector(new ConfigModule(conf2),
         new DiscoveryModules().getSingleNodeModules(), new TransactionModules().getSingleNodeModules());
 
@@ -242,6 +248,9 @@ public class SnapshotCodecTest {
     txStorage.startAndWait();
 
     TransactionSnapshot snapshot = txStorage.getLatestSnapshot();
+    MinimalTransactionSnapshot minTxSnapshot = txStorage.getLatestMinimalSnapshot();
+    Assert.assertEquals(minTxSnapshot, snapshot);
+
     Map<Long, TransactionManager.InProgressTx> inProgress = snapshot.getInProgress();
     Assert.assertEquals(1, inProgress.size());
 
