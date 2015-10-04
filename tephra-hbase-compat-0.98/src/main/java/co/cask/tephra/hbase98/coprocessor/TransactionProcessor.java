@@ -151,7 +151,7 @@ public class TransactionProcessor extends BaseRegionObserver {
     if (tx != null) {
       projectFamilyDeletes(get);
       get.setMaxVersions();
-      get.setTimeRange(TxUtils.getOldestVisibleTimestamp(ttlByFamily, tx), TxUtils.getMaxVisibleTimestamp(tx));
+      get.setTimeRange(0, TxUtils.getMaxVisibleTimestamp(tx));
       Filter newFilter = Filters.combine(getTransactionFilter(tx, ScanType.USER_SCAN), get.getFilter());
       get.setFilter(newFilter);
     }
@@ -203,7 +203,7 @@ public class TransactionProcessor extends BaseRegionObserver {
     if (tx != null) {
       projectFamilyDeletes(scan);
       scan.setMaxVersions();
-      scan.setTimeRange(TxUtils.getOldestVisibleTimestamp(ttlByFamily, tx), TxUtils.getMaxVisibleTimestamp(tx));
+      scan.setTimeRange(0, TxUtils.getMaxVisibleTimestamp(tx));
       Filter newFilter = Filters.combine(getTransactionFilter(tx, ScanType.USER_SCAN), scan.getFilter());
       scan.setFilter(newFilter);
     }

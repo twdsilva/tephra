@@ -904,6 +904,68 @@ public class TransactionAwareHTableTest {
     txContext2.finish();
   }
 
+  @Test
+  public void testExistingData() throws Exception {
+    byte[] val11 = Bytes.toBytes("val11");
+    byte[] val12 = Bytes.toBytes("val12");
+    byte[] val21 = Bytes.toBytes("val21");
+    byte[] val22 = Bytes.toBytes("val22");
+    byte[] val31 = Bytes.toBytes("val31");
+    byte[] val111 = Bytes.toBytes("val111");
+
+    // Add some pre-existing, non-transactional data
+    HTable nonTxTable = new HTable(testUtil.getConfiguration(), transactionAwareHTable.getTableName());
+    nonTxTable.put(new Put(TestBytes.row).add(TestBytes.family, TestBytes.qualifier, val11));
+    nonTxTable.put(new Put(TestBytes.row).add(TestBytes.family, TestBytes.qualifier2, val12));
+    nonTxTable.put(new Put(TestBytes.row2).add(TestBytes.family, TestBytes.qualifier, val21));
+    nonTxTable.put(new Put(TestBytes.row2).add(TestBytes.family, TestBytes.qualifier2, val22));
+    nonTxTable.flushCommits();
+
+    // Add transactional data
+    transactionContext.start();
+    transactionAwareHTable.put(new Put(TestBytes.row3).add(TestBytes.family, TestBytes.qualifier, val31));
+    transactionContext.finish();
+
+    transactionContext.start();
+    // test get
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row).addColumn(TestBytes.family, TestBytes.qualifier), val11);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row).addColumn(TestBytes.family, TestBytes.qualifier2), val12);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row2).addColumn(TestBytes.family, TestBytes.qualifier), val21);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row2).addColumn(TestBytes.family, TestBytes.qualifier2), val22);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row3).addColumn(TestBytes.family, TestBytes.qualifier), val31);
+
+    // test scan
+    try (ResultScanner scanner = transactionAwareHTable.getScanner(new Scan())) {
+      Result result = scanner.next();
+      assertNotNull(result);
+      assertArrayEquals(val11, result.getValue(TestBytes.family, TestBytes.qualifier));
+      assertArrayEquals(val12, result.getValue(TestBytes.family, TestBytes.qualifier2));
+      result = scanner.next();
+      assertNotNull(result);
+      assertArrayEquals(val21, result.getValue(TestBytes.family, TestBytes.qualifier));
+      assertArrayEquals(val22, result.getValue(TestBytes.family, TestBytes.qualifier2));
+      result = scanner.next();
+      assertNotNull(result);
+      assertArrayEquals(val31, result.getValue(TestBytes.family, TestBytes.qualifier));
+      assertNull(scanner.next());
+    }
+    transactionContext.finish();
+
+    // test update and delete
+    transactionContext.start();
+    transactionAwareHTable.put(new Put(TestBytes.row).add(TestBytes.family, TestBytes.qualifier, val111));
+    transactionAwareHTable.delete(new Delete(TestBytes.row2).deleteColumns(TestBytes.family, TestBytes.qualifier));
+    transactionContext.finish();
+
+    transactionContext.start();
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row).addColumn(TestBytes.family, TestBytes.qualifier), val111);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row).addColumn(TestBytes.family, TestBytes.qualifier2), val12);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row2).addColumn(TestBytes.family, TestBytes.qualifier), null);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row2).addColumn(TestBytes.family, TestBytes.qualifier2), val22);
+    verifyRow(transactionAwareHTable, new Get(TestBytes.row3).addColumn(TestBytes.family, TestBytes.qualifier), val31);
+    transactionContext.finish();
+  }
+
   private void verifyRow(HTableInterface table, byte[] rowkey, byte[] expectedValue) throws Exception {
     verifyRow(table, new Get(rowkey), expectedValue);
   }
@@ -914,7 +976,13 @@ public class TransactionAwareHTableTest {
       assertTrue(result.isEmpty());
     } else {
       assertFalse(result.isEmpty());
-      assertArrayEquals(expectedValue, result.getValue(TestBytes.family, TestBytes.qualifier));
+      if (get.hasFamilies()) {
+        byte[] family = get.getFamilyMap().keySet().iterator().next();
+        byte[] col = get.getFamilyMap().get(family).first();
+        assertArrayEquals(expectedValue, result.getValue(family, col));
+      } else {
+        assertArrayEquals(expectedValue, result.getValue(TestBytes.family, TestBytes.qualifier));
+      }
     }
   }
 }

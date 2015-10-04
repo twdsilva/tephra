@@ -30,6 +30,10 @@ import java.util.Map;
  */
 public class TxUtils {
 
+  // Any cell with timestamp lesser than MAX_NON_TX_TIMESTAMP is assumed to be pre-existing data,
+  // i.e. data written before table was converted into transactional table using Tephra.
+  private static final long MAX_NON_TX_TIMESTAMP = (long) (System.currentTimeMillis() * 1.1);
+
   /**
    * Returns the oldest visible timestamp for the given transaction, based on the TTLs configured for each column
    * family.  If no TTL is set on any column family, the oldest visible timestamp will be {@code 0}.
@@ -87,5 +91,13 @@ public class TxUtils {
       }
     }
     return firstShort;
+  }
+
+  /**
+   * Returns the timestamp for calculating time to live for the given cell timestamp.
+   * This takes into account pre-existing non-transactional cells while calculating the time.
+   */
+  public static long getTtlTimestamp(long cellTs) {
+    return cellTs < MAX_NON_TX_TIMESTAMP ? cellTs * TxConstants.MAX_TX_PER_MS : cellTs;
   }
 }
