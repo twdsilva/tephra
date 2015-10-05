@@ -79,10 +79,7 @@ public class TransactionSnapshot extends MinimalTransactionSnapshot {
       return false;
     }
     TransactionSnapshot other = (TransactionSnapshot) obj;
-    return getReadPointer() == other.getReadPointer() &&
-      getWritePointer() == other.getWritePointer() &&
-      getInvalid().equals(other.getInvalid()) &&
-      getInProgress().equals(other.getInProgress()) &&
+    return super.equals(obj) &&
       committingChangeSets.equals(other.committingChangeSets) &&
       committedChangeSets.equals(other.committedChangeSets);
   }
