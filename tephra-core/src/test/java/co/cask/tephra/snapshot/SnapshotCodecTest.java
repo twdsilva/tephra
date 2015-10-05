@@ -63,6 +63,60 @@ public class SnapshotCodecTest {
   @ClassRule
   public static TemporaryFolder tmpDir = new TemporaryFolder();
 
+  @Test
+  public void testMinimalDeserilization() throws Exception {
+    long now = System.currentTimeMillis();
+    long nowWritePointer = now * TxConstants.MAX_TX_PER_MS;
+    /*
+     * Snapshot consisting of transactions at:
+     */
+    long tInvalid = nowWritePointer - 5;    // t1 - invalid
+    long readPtr = nowWritePointer - 4;     // t2 - here and earlier committed
+    long tLong = nowWritePointer - 3;       // t3 - in-progress LONG
+    long tCommitted = nowWritePointer - 2;  // t4 - committed, changeset (r1, r2)
+    long tShort = nowWritePointer - 1;      // t5 - in-progress SHORT, canCommit called, changeset (r3, r4)
+
+    TreeMap<Long, TransactionManager.InProgressTx> inProgress = Maps.newTreeMap(ImmutableSortedMap.of(
+      tLong, new TransactionManager.InProgressTx(readPtr,
+                                                 TransactionManager.getTxExpirationFromWritePointer(
+                                                   tLong, TxConstants.Manager.DEFAULT_TX_LONG_TIMEOUT),
+                                                 TransactionType.LONG),
+      tShort, new TransactionManager.InProgressTx(readPtr, now + 1000, TransactionType.SHORT)));
+
+    TransactionSnapshot snapshot = new TransactionSnapshot(now, readPtr, nowWritePointer,
+                                                           Lists.newArrayList(tInvalid), // invalid
+                                                           inProgress, ImmutableMap.<Long, Set<ChangeId>>of(
+                                                             tShort, Sets.<ChangeId>newHashSet()),
+                                                           ImmutableMap.<Long, Set<ChangeId>>of(
+                                                             tCommitted, Sets.<ChangeId>newHashSet()));
+
+    Configuration conf1 = new Configuration();
+    conf1.set(TxConstants.Persist.CFG_TX_SNAPHOT_CODEC_CLASSES, SnapshotCodecV4.class.getName());
+    SnapshotCodecProvider provider1 = new SnapshotCodecProvider(conf1);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    try {
+      provider1.encode(out, snapshot);
+    } finally {
+      out.close();
+    }
+
+    // Corrupt the serialization byte array so that full deserialization will fail
+    byte[] byteArray = out.toByteArray();
+    byteArray[byteArray.length - 1] = 'a';
+
+    // Minimal Tx Snapshot decoding should pass since it doesn't decode the committing and committed changesets.
+    MinimalTransactionSnapshot minSnapshot = provider1.decodeMinimalSnapshot(new ByteArrayInputStream(byteArray));
+    Assert.assertEquals(readPtr, minSnapshot.getReadPointer());
+    Assert.assertNotNull(minSnapshot);
+    try {
+      provider1.decode(new ByteArrayInputStream(byteArray));
+      Assert.fail();
+    } catch (RuntimeException e) {
+      // expected since we modified the serialization bytes
+    }
+  }
+
   /**
    * In-progress LONG transactions written with DefaultSnapshotCodec will not have the type serialized as part of
    * the data.  Since these transactions also contain a non-negative expiration, we need to ensure we reset the type
