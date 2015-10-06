@@ -97,7 +97,7 @@ public class TxUtils {
    * Returns the timestamp for calculating time to live for the given cell timestamp.
    * This takes into account pre-existing non-transactional cells while calculating the time.
    */
-  public static long getTtlTimestamp(long cellTs) {
+  public static long getTimestampForTTL(long cellTs) {
     return cellTs < MAX_NON_TX_TIMESTAMP ? cellTs * TxConstants.MAX_TX_PER_MS : cellTs;
   }
 }
