@@ -30,8 +30,25 @@ import java.util.Map;
  */
 public class TxUtils {
 
-  // Any cell with timestamp lesser than MAX_NON_TX_TIMESTAMP is assumed to be pre-existing data,
+  // Any cell with timestamp less than MAX_NON_TX_TIMESTAMP is assumed to be pre-existing data,
   // i.e. data written before table was converted into transactional table using Tephra.
+  // Using 1.1 times current time to determine whether a timestamp is transactional timestamp or not is safe, and does
+  // not produce any false positives or false negatives.
+  //
+  // To prove this, let's say the earliest transactional timestamp written by Tephra was in year 2000, and the oldest
+  // that will be written is in year 2200.
+  // 01-Jan-2000 GMT is  946684800000 milliseconds since epoch.
+  // 31-Dec-2200 GMT is 7289654399000 milliseconds since epoch.
+  //
+  // Let's say that we enabled transactions on a table on 01-Jan-2000, then 1.1 * 946684800000 = 31-Dec-2002. Using
+  // 31-Dec-2002, we can safely say from 01-Jan-2000 onwards, whether a cell timestamp is
+  // non-transactional (<= 946684800000).
+  // Note that transactional timestamp will be greater than 946684800000000000 (> year 31969) at this instant.
+  //
+  // On the other end, let's say we enabled transactions on a table on 31-Dec-2200,
+  // then 1.1 * 7289654399000 = 07-Feb-2224. Again, we can use this time from 31-Dec-2200 onwards to say whether a
+  // cell timestamp is transactional (<= 7289654399000).
+  // Note that transactional timestamp will be greater than 7289654399000000000 (> year 232969) at this instant.
   private static final long MAX_NON_TX_TIMESTAMP = (long) (System.currentTimeMillis() * 1.1);
 
   /**
